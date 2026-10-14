@@ -1,0 +1,48 @@
+# Comprueba el FORMATO (nunca la corrección) de respuestas.json y oleadaN.json en cada push.
+# Solo lectura, sin secretos, sin acciones de terceros: el runner ya trae Python 3 y el
+# validador es la copia de starter-kit/validar_respuestas.py (biblioteca estándar).
+name: Validar entrega
+
+on:
+  push:
+    paths:
+      - "respuestas.json"
+      - "oleada1.json"
+      - "oleada2.json"
+      - "oleada3.json"
+      - "starter-kit/**"
+      - ".github/workflows/validar.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validar-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    name: Formato de los JSON de entrega
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validar respuestas.json y oleadaN.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 --version
+          ficheros=()
+          for f in respuestas.json oleada1.json oleada2.json oleada3.json; do
+            [ -f "$f" ] && ficheros+=("$f")
+          done
+          if [ "${#ficheros[@]}" -eq 0 ]; then
+            echo "No hay ficheros de entrega en la raíz (respuestas.json, oleadaN.json)."
+            exit 0
+          fi
+          python3 starter-kit/validar_respuestas.py --schema-dir starter-kit "${ficheros[@]}"
